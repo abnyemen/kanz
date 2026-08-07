@@ -29,13 +29,13 @@ class GameRepository(private val gameDao: GameDao) {
 
     suspend fun unlockAchievement(id: String) {
         val currentAchievements = listOf(
-            Achievement("first_steps", "First Explorer", "مستكشف مبتدئ", "Began the desert journey", "بدأت رحلة الصحراء", true, System.currentTimeMillis()),
-            Achievement("oasis_finder", "Oasis Sanctuary", "واحة الأمان", "Discovered the Palm Oasis", "اكتشفت واحة النخيل", true, System.currentTimeMillis()),
-            Achievement("horus_key", "Eye of Horus", "عين حورس", "Unlocked Horus Key", "حصلت على مفتاح حورس", true, System.currentTimeMillis()),
-            Achievement("anubis_slayer", "Guardian Slayer", "قاهر الحارس", "Defeated Anubis Boss", "هزمت حارس أنوبيس", true, System.currentTimeMillis()),
-            Achievement("camel_rider", "Desert Nomad", "رحالة الصحراء", "Rode a desert camel", "ركبت الجمل في الصحراء", true, System.currentTimeMillis()),
-            Achievement("sandstorm_survivor", "Storm Walker", "مواجه العواصف", "Survived a severe sandstorm", "نجوت من عاصفة رملية شديدة", true, System.currentTimeMillis()),
-            Achievement("desert_treasure", "Legendary Master", "أسطورة كنز الصحراء", "Unlocked the Great Pyramid Treasure!", "فتحت كنز الهرم الأكبر الأسطوري!", true, System.currentTimeMillis())
+            Achievement("first_steps", "First Explorer", "مستكشف مبتدئ", "Began the desert journey", "بدأت رحلة الصحراء", "EASY", 300, 2, true, System.currentTimeMillis()),
+            Achievement("oasis_finder", "Oasis Sanctuary", "واحة الأمان", "Discovered the Palm Oasis", "اكتشفت واحة النخيل", "EASY", 350, 3, true, System.currentTimeMillis()),
+            Achievement("horus_key", "Eye of Horus", "عين حورس", "Unlocked Horus Key", "حصلت على مفتاح حورس", "MEDIUM", 500, 5, true, System.currentTimeMillis()),
+            Achievement("anubis_slayer", "Guardian Slayer", "قاهر الحارس", "Defeated Anubis Boss", "هزمت حارس أنوبيس", "HARD", 800, 15, true, System.currentTimeMillis()),
+            Achievement("camel_rider", "Desert Nomad", "رحالة الصحراء", "Rode a desert camel", "ركبت الجمل في الصحراء", "EASY", 250, 2, true, System.currentTimeMillis()),
+            Achievement("sandstorm_survivor", "Storm Walker", "مواجه العواصف", "Survived a severe sandstorm", "نجوت من عاصفة رملية شديدة", "MEDIUM", 450, 5, true, System.currentTimeMillis()),
+            Achievement("desert_treasure", "Legendary Master", "أسطورة كنز الصحراء", "Unlocked the Great Pyramid Treasure!", "فتحت كنز الهرم الأكبر الأسطوري!", "LEGENDARY", 1500, 25, true, System.currentTimeMillis())
         )
         val target = currentAchievements.find { it.id == id }
         if (target != null) {
@@ -169,7 +169,7 @@ class GameRepository(private val gameDao: GameDao) {
 
             // Initial achievement
             gameDao.insertAchievement(
-                Achievement("first_steps", "First Explorer", "مستكشف مبتدئ", "Began the desert journey", "بدأت رحلة الصحراء", true, System.currentTimeMillis())
+                Achievement("first_steps", "First Explorer", "مستكشف مبتدئ", "Began the desert journey", "بدأت رحلة الصحراء", "EASY", 300, 2, true, System.currentTimeMillis())
             )
         }
     }

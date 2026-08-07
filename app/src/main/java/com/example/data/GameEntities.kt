@@ -16,6 +16,7 @@ data class GameSave(
     val hydration: Int = 100,
     val stamina: Int = 100,
     val goldCoins: Int = 50,
+    val diamonds: Int = 10,
     val activeWeapon: String = "Bronze Sword",
     val isTorchLit: Boolean = false,
     val currentMount: String = "none", // "none", "camel", "horse"
@@ -60,6 +61,9 @@ data class Achievement(
     val titleAr: String,
     val descriptionEn: String,
     val descriptionAr: String,
+    val difficulty: String = "EASY", // "EASY", "MEDIUM", "HARD", "LEGENDARY"
+    val rewardGold: Int = 100,
+    val rewardDiamonds: Int = 2,
     val isUnlocked: Boolean = false,
     val unlockedTime: Long = 0
 )

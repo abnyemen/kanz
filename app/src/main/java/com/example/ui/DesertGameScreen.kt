@@ -36,6 +36,7 @@ fun DesertGameScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val inventoryList by viewModel.inventory.collectAsStateWithLifecycle()
+    val achievementsList by viewModel.achievements.collectAsStateWithLifecycle()
     val unlockedTemplesList by viewModel.unlockedTemples.collectAsStateWithLifecycle()
     val feedbackState by viewModel.feedbackManager.feedbackState.collectAsStateWithLifecycle()
 
@@ -59,6 +60,14 @@ fun DesertGameScreen(
         uiState.toastMessage?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    val isInLobby = remember(uiState.activeDialog) {
+        uiState.activeDialog == ActiveDialogType.STORY_INTRO ||
+                uiState.activeDialog == ActiveDialogType.DESERT_SHOP ||
+                uiState.activeDialog == ActiveDialogType.HERO_CUSTOMIZATION ||
+                uiState.activeDialog == ActiveDialogType.EXPLORER_GUIDE ||
+                uiState.activeDialog == ActiveDialogType.ACHIEVEMENTS
     }
 
     Box(
@@ -96,40 +105,66 @@ fun DesertGameScreen(
                 }
         )
 
-        // --- 2. MINIMAP OVERLAY (TOP RIGHT) ---
-        MiniMap(
-            playerPos = viewModel.world.playerPos,
-            playerYaw = viewModel.world.playerYaw,
-            entities = viewModel.world.entities,
-            onClickMap = { viewModel.setDialog(ActiveDialogType.WORLD_MAP) },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 70.dp, end = 12.dp)
-        )
+        // --- 2. MINIMAP OVERLAY (ONLY IN GAMEPLAY) ---
+        if (!isInLobby && uiState.activeDialog != ActiveDialogType.LOADING_SCREEN) {
+            MiniMap(
+                playerPos = viewModel.world.playerPos,
+                playerYaw = viewModel.world.playerYaw,
+                entities = viewModel.world.entities,
+                onClickMap = { viewModel.setDialog(ActiveDialogType.WORLD_MAP) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 70.dp, end = 12.dp)
+            )
+        }
 
-        // --- 3. GAME HUD OVERLAY ---
-        GameHudOverlay(
-            uiState = uiState,
-            unlockedTemples = unlockedTemplesList,
-            onMoveInput = { dx, dy -> viewModel.onMoveInput(dx, dy) },
-            onAttack = { viewModel.performAttack() },
-            onJump = { viewModel.performJump() },
-            onRoll = { viewModel.performRoll() },
-            onToggleTorch = { viewModel.toggleTorch() },
-            onDrinkWater = { viewModel.drinkWater() },
-            onInteract = { viewModel.interactWithNearby() },
-            onOpenDialog = { dialog -> viewModel.setDialog(dialog) },
-            onToggleLanguage = { viewModel.toggleLanguage() },
-            onFalconCall = { viewModel.triggerFalconCall() },
-            onCamelBoost = { viewModel.triggerCamelSprint() }
-        )
+        // --- 3. GAME HUD OVERLAY (ONLY IN GAMEPLAY) ---
+        if (!isInLobby && uiState.activeDialog != ActiveDialogType.LOADING_SCREEN) {
+            GameHudOverlay(
+                uiState = uiState,
+                unlockedTemples = unlockedTemplesList,
+                onMoveInput = { dx, dy -> viewModel.onMoveInput(dx, dy) },
+                onAttack = { viewModel.performAttack() },
+                onJump = { viewModel.performJump() },
+                onRoll = { viewModel.performRoll() },
+                onToggleTorch = { viewModel.toggleTorch() },
+                onDrinkWater = { viewModel.drinkWater() },
+                onInteract = { viewModel.interactWithNearby() },
+                onOpenDialog = { dialog -> viewModel.setDialog(dialog) },
+                onToggleLanguage = { viewModel.toggleLanguage() },
+                onFalconCall = { viewModel.triggerFalconCall() },
+                onCamelBoost = { viewModel.triggerCamelSprint() }
+            )
+        }
 
-        // --- 4. ACTIVE DIALOG OVERLAYS ---
+        // --- 4. FULL-SCREEN LOBBY SCREEN (WHEN IN LOBBY STATE) ---
+        if (isInLobby) {
+            MainLobbyScreen(
+                language = uiState.language,
+                goldCoins = uiState.goldCoins,
+                diamonds = uiState.diamonds,
+                keysCount = uiState.keysCollectedCount,
+                selectedHeroSkin = uiState.selectedHeroSkin,
+                currentMount = uiState.currentMount,
+                onStartJourney = { viewModel.setDialog(ActiveDialogType.LOADING_SCREEN) },
+                onOpenShop = { viewModel.setDialog(ActiveDialogType.DESERT_SHOP) },
+                onOpenCustomization = { viewModel.setDialog(ActiveDialogType.HERO_CUSTOMIZATION) },
+                onOpenWorldMap = { viewModel.setDialog(ActiveDialogType.WORLD_MAP) },
+                onOpenAchievements = { viewModel.setDialog(ActiveDialogType.ACHIEVEMENTS) },
+                onOpenSettings = { viewModel.setDialog(ActiveDialogType.SETTINGS) },
+                onOpenGuide = { viewModel.setDialog(ActiveDialogType.EXPLORER_GUIDE) },
+                onToggleLanguage = { viewModel.toggleLanguage() }
+            )
+        }
+
+        // --- 5. ACTIVE DIALOG OVERLAYS OVER GAME OR LOBBY ---
         when (uiState.activeDialog) {
             ActiveDialogType.WORLD_MAP -> {
                 WorldMapDialog(
                     language = uiState.language,
-                    onClose = { viewModel.setDialog(ActiveDialogType.NONE) },
+                    onClose = {
+                        viewModel.setDialog(if (isInLobby) ActiveDialogType.STORY_INTRO else ActiveDialogType.NONE)
+                    },
                     onFastTravel = { px, pz ->
                         viewModel.world.playerPos.set(px, 0.5f, pz)
                     }
@@ -197,14 +232,52 @@ fun DesertGameScreen(
                     onResetControls = { viewModel.resetControlsToDefault() },
                     onToggleLanguage = { viewModel.toggleLanguage() },
                     onResetGame = { viewModel.resetGame() },
-                    onClose = { viewModel.setDialog(ActiveDialogType.NONE) }
+                    onClose = {
+                        viewModel.setDialog(if (isInLobby) ActiveDialogType.STORY_INTRO else ActiveDialogType.NONE)
+                    }
                 )
             }
 
-            ActiveDialogType.STORY_INTRO -> {
-                StoryIntroDialog(
+            ActiveDialogType.DESERT_SHOP -> {
+                DesertShopDialog(
                     language = uiState.language,
-                    onStartJourney = { viewModel.setDialog(ActiveDialogType.LOADING_SCREEN) }
+                    playerGold = uiState.goldCoins,
+                    playerDiamonds = uiState.diamonds,
+                    onBuyItem = { id, nameEn, nameAr, cost, currency, icon, type ->
+                        viewModel.buyShopItem(id, nameEn, nameAr, cost, currency, icon, type)
+                    },
+                    onClose = { viewModel.setDialog(ActiveDialogType.STORY_INTRO) }
+                )
+            }
+
+            ActiveDialogType.ACHIEVEMENTS -> {
+                AchievementsDialog(
+                    language = uiState.language,
+                    goldCoins = uiState.goldCoins,
+                    diamonds = uiState.diamonds,
+                    achievementsList = achievementsList,
+                    claimedAchievementIds = uiState.claimedAchievementIds,
+                    onClaimReward = { achievement -> viewModel.claimAchievementReward(achievement) },
+                    onClose = { viewModel.setDialog(ActiveDialogType.STORY_INTRO) }
+                )
+            }
+
+            ActiveDialogType.HERO_CUSTOMIZATION -> {
+                HeroCustomizationDialog(
+                    language = uiState.language,
+                    currentSkin = uiState.selectedHeroSkin,
+                    currentMount = uiState.currentMount,
+                    unlockedMounts = uiState.unlockedMounts,
+                    onSelectSkin = { skinId -> viewModel.selectHeroSkin(skinId) },
+                    onSelectMount = { mountId -> viewModel.selectMount(mountId) },
+                    onClose = { viewModel.setDialog(ActiveDialogType.STORY_INTRO) }
+                )
+            }
+
+            ActiveDialogType.EXPLORER_GUIDE -> {
+                ExplorerGuideDialog(
+                    language = uiState.language,
+                    onClose = { viewModel.setDialog(ActiveDialogType.STORY_INTRO) }
                 )
             }
 

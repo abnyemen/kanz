@@ -32,7 +32,10 @@ enum class ActiveDialogType {
     GAME_OVER,
     VICTORY_SCREEN,
     PAUSE_MENU,
-    LOADING_SCREEN
+    LOADING_SCREEN,
+    DESERT_SHOP,
+    HERO_CUSTOMIZATION,
+    EXPLORER_GUIDE
 }
 
 data class LootRewardItem(

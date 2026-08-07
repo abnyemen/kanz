@@ -24,7 +24,7 @@ import kotlin.math.sin
 
 data class GameUiState(
     val language: AppLanguage = AppLanguage.ARABIC,
-    val activeDialog: ActiveDialogType = ActiveDialogType.NONE,
+    val activeDialog: ActiveDialogType = ActiveDialogType.STORY_INTRO,
     val currentQuest: Quest = Quest(
         id = "quest_1_landing",
         titleEn = "The Lost Desert Map",
@@ -35,6 +35,7 @@ data class GameUiState(
     ),
     val keysCollectedCount: Int = 0,
     val goldCoins: Int = 50,
+    val diamonds: Int = 10,
     val health: Int = 100,
     val hydration: Int = 100,
     val stamina: Int = 100,
@@ -63,7 +64,11 @@ data class GameUiState(
     val falconCooldownRemaining: Int = 0,
     val mountSpeedBoostActive: Boolean = false,
     val activeBuffNameEn: String? = null,
-    val activeBuffNameAr: String? = null
+    val activeBuffNameAr: String? = null,
+    val selectedHeroSkin: String = "nomad",
+    val unlockedSkins: Set<String> = setOf("nomad"),
+    val unlockedMounts: Set<String> = setOf("none", "camel"),
+    val claimedAchievementIds: Set<String> = emptySet()
 )
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
@@ -366,6 +371,174 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             delay(4500)
             _uiState.value = _uiState.value.copy(mountSpeedBoostActive = false)
         }
+    }
+
+    fun claimAchievementReward(achievement: Achievement) {
+        val isAr = _uiState.value.language == AppLanguage.ARABIC
+        if (_uiState.value.claimedAchievementIds.contains(achievement.id)) {
+            showToast(if (isAr) "تم استلام مكافأة هذا الإنجاز بالفعل!" else "Reward already claimed!")
+            return
+        }
+
+        val newDiamonds = _uiState.value.diamonds + achievement.rewardDiamonds
+        val newGold = world.goldCoins + achievement.rewardGold
+        world.goldCoins = newGold
+
+        val newClaimed = _uiState.value.claimedAchievementIds + achievement.id
+        _uiState.value = _uiState.value.copy(
+            diamonds = newDiamonds,
+            goldCoins = newGold,
+            claimedAchievementIds = newClaimed
+        )
+
+        soundEngine.playPickupChime()
+        feedbackManager.triggerCollect(symbol = "💎")
+
+        val rewardText = if (achievement.rewardDiamonds > 0 && achievement.rewardGold > 0) {
+            "+${achievement.rewardDiamonds} ألماس 💎 و +${achievement.rewardGold} ذهب 🪙"
+        } else if (achievement.rewardDiamonds > 0) {
+            "+${achievement.rewardDiamonds} ألماس 💎"
+        } else {
+            "+${achievement.rewardGold} ذهب 🪙"
+        }
+
+        showToast(if (isAr) "تهانينا! تم استلام $rewardText 🏆" else "Reward Claimed: $rewardText 🏆")
+        saveGameState()
+    }
+
+    fun buyShopItem(
+        itemId: String,
+        nameEn: String,
+        nameAr: String,
+        cost: Int,
+        currency: String = "GOLD",
+        icon: String,
+        itemType: String
+    ) {
+        val isAr = _uiState.value.language == AppLanguage.ARABIC
+
+        if (currency == "DIAMONDS") {
+            if (_uiState.value.diamonds < cost) {
+                showToast(if (isAr) "الألماس غير كافٍ! تحتاج إلى $cost ألماس 💎" else "Not enough diamonds! Need $cost diamonds 💎")
+                return
+            }
+            _uiState.value = _uiState.value.copy(diamonds = _uiState.value.diamonds - cost)
+        } else {
+            if (world.goldCoins < cost) {
+                showToast(if (isAr) "الذهب غير كافٍ! تحتاج إلى $cost ذهب 🪙" else "Not enough gold! Need $cost gold 🪙")
+                return
+            }
+            world.goldCoins -= cost
+        }
+
+        soundEngine.playPickupChime()
+        feedbackManager.triggerCollect(symbol = if (currency == "DIAMONDS") "💎" else "🪙")
+
+        viewModelScope.launch {
+            when (itemId) {
+                "skin_pharaoh", "pharaoh" -> {
+                    val newSkins = _uiState.value.unlockedSkins + "pharaoh"
+                    _uiState.value = _uiState.value.copy(unlockedSkins = newSkins, selectedHeroSkin = "pharaoh")
+                    showToast(if (isAr) "تم شراء وتجهيز زي الفارس الفرعوني الذهبي! 🤴👑" else "Unlocked & equipped Golden Pharaoh Skin! 🤴👑")
+                }
+                "skin_guardian", "guardian" -> {
+                    val newSkins = _uiState.value.unlockedSkins + "guardian"
+                    _uiState.value = _uiState.value.copy(unlockedSkins = newSkins, selectedHeroSkin = "guardian")
+                    showToast(if (isAr) "تم شراء وتجهيز مظهر حارس الواحة الأسطوري! 🧙‍♂️🛡️" else "Unlocked & equipped Oasis Guardian Skin! 🧙‍♂️🛡️")
+                }
+                "elixir_immortal" -> {
+                    world.health = 100
+                    world.hydration = 100
+                    world.stamina = 100
+                    showToast(if (isAr) "تم استخدام إكسير الفراعنة الشامل! (استعادة كاملة ❤️💧⚡)" else "Used Elixir of the Gods! Full Restore ❤️💧⚡")
+                }
+                "sword_golden" -> {
+                    repository.addItem(
+                        InventoryItem(
+                            itemId = "sword_golden",
+                            nameEn = nameEn,
+                            nameAr = nameAr,
+                            itemType = "weapon",
+                            quantity = 1,
+                            descriptionEn = "Legendary Golden Blade bought with diamonds",
+                            descriptionAr = "سيف فرعوني نادِر وساطع مشتري بالألماس",
+                            iconName = "weapon",
+                            isEquipped = true
+                        )
+                    )
+                    showToast(if (isAr) "تم شراء وتجهيز سيف توت عنخ آمون الذهبي! ⚔️💎" else "Bought & equipped Tutankhamun Golden Blade! ⚔️💎")
+                }
+                "potion_health" -> {
+                    world.health = (world.health + 50).coerceAtMost(100)
+                    showToast(if (isAr) "تم شراء واستخدام إكسير الشفاء! (+50 صحة ❤️)" else "Bought Healing Elixir! (+50 HP ❤️)")
+                }
+                "potion_water" -> {
+                    world.hydration = (world.hydration + 50).coerceAtMost(100)
+                    showToast(if (isAr) "تم شراء قارورة الماء! (+50 ارتواء 💧)" else "Bought Water Flask! (+50 Hydration 💧)")
+                }
+                "saddle_camel" -> {
+                    world.currentMount = "camel"
+                    val newMounts = _uiState.value.unlockedMounts + "camel"
+                    _uiState.value = _uiState.value.copy(unlockedMounts = newMounts, currentMount = "camel")
+                    showToast(if (isAr) "تم شراء وتجهيز سرج الجمل الأصيل! 🐪" else "Bought & equipped Camel Saddle! 🐪")
+                }
+                "bridle_horse" -> {
+                    world.currentMount = "horse"
+                    val newMounts = _uiState.value.unlockedMounts + "horse"
+                    _uiState.value = _uiState.value.copy(unlockedMounts = newMounts, currentMount = "horse")
+                    showToast(if (isAr) "تم شراء وتجهيز لجام الحصان العربي! 🐎" else "Bought & equipped Arabian Horse Bridle! 🐎")
+                }
+                "key_fragment" -> {
+                    world.keysCollected = (world.keysCollected + 1).coerceAtMost(4)
+                    _uiState.value = _uiState.value.copy(keysCollectedCount = world.keysCollected)
+                    showToast(if (isAr) "تم شراء مفتاح أثري! 🔑 (${world.keysCollected}/4)" else "Bought Ancient Key! 🔑 (${world.keysCollected}/4)")
+                }
+                else -> {
+                    repository.addItem(
+                        InventoryItem(
+                            itemId = itemId,
+                            nameEn = nameEn,
+                            nameAr = nameAr,
+                            descriptionEn = "Purchased from Bedouin Bazaar",
+                            descriptionAr = "تم شراؤه من سوق البدو",
+                            itemType = itemType,
+                            iconName = icon,
+                            quantity = 1
+                        )
+                    )
+                    showToast(if (isAr) "تم شراء $nameAr واضافته للحقيبة 🎒" else "Bought $nameEn! Added to Inventory 🎒")
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                goldCoins = world.goldCoins,
+                health = world.health,
+                hydration = world.hydration
+            )
+            saveGameState()
+        }
+    }
+
+    fun selectMount(mount: String) {
+        world.currentMount = mount
+        _uiState.value = _uiState.value.copy(currentMount = mount)
+        val isAr = _uiState.value.language == AppLanguage.ARABIC
+        showToast(
+            if (isAr) {
+                when(mount) {
+                    "camel" -> "تم اختيار الجمل ركوبة أساسية! 🐪"
+                    "horse" -> "تم اختيار الحصان العربي! 🐎"
+                    else -> "تم الترجل من المركوب 🚶"
+                }
+            } else {
+                "Equipped mount: $mount"
+            }
+        )
+    }
+
+    fun selectHeroSkin(skinId: String) {
+        _uiState.value = _uiState.value.copy(selectedHeroSkin = skinId)
+        val isAr = _uiState.value.language == AppLanguage.ARABIC
+        showToast(if (isAr) "تم تغيير مظهر الشخصية بنجاح! 👤✨" else "Hero Skin changed! 👤✨")
     }
 
     private fun checkNearbyInteractions() {
