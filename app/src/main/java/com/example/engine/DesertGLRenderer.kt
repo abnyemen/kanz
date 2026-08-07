@@ -44,12 +44,25 @@ class DesertGLRenderer(
     var cameraDistance = 7f
 
     private var lastTimeMs = System.currentTimeMillis()
+    private var totalTimeSeconds = 0f
+    private var frameCount = 0
+    private var fpsTimerMs = System.currentTimeMillis()
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.5f, 0.7f, 0.9f, 1.0f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
+        // Query device screen maximum display refresh rate (e.g. 60Hz, 90Hz, 120Hz, 144Hz)
+        try {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
+            val display = windowManager?.defaultDisplay
+            val refreshRate = display?.refreshRate?.toInt() ?: 60
+            world.deviceMaxHz = refreshRate.coerceAtLeast(60)
+        } catch (e: Exception) {
+            world.deviceMaxHz = 60
+        }
 
         shader.init()
 
@@ -96,6 +109,15 @@ class DesertGLRenderer(
         val now = System.currentTimeMillis()
         val deltaTime = ((now - lastTimeMs) / 1000f).coerceIn(0.001f, 0.1f)
         lastTimeMs = now
+        totalTimeSeconds += deltaTime
+
+        // Calculate live FPS
+        frameCount++
+        if (now - fpsTimerMs >= 1000) {
+            world.currentFps = frameCount
+            frameCount = 0
+            fpsTimerMs = now
+        }
 
         // Update 3D world state if not paused
         if (!world.isGamePaused) {
@@ -122,7 +144,42 @@ class DesertGLRenderer(
         GLES20.glUniform3f(shader.ambientColorHandle, ambientColor[0], ambientColor[1], ambientColor[2])
         GLES20.glUniform3f(shader.fogColorHandle, fogColor[0], fogColor[1], fogColor[2])
 
-        val fogDensity = if (world.weatherState == WeatherState.SANDSTORM) 0.04f else 0.008f
+        // Pass View Pos for Blinn-Phong Specular Reflections
+        val radYaw = Math.toRadians((cameraYaw + world.playerYaw).toDouble()).toFloat()
+        val radPitch = Math.toRadians(cameraPitch.toDouble()).toFloat()
+        val camX = world.playerPos.x + cameraDistance * sin(radYaw) * cos(radPitch)
+        val camY = world.playerPos.y + cameraDistance * sin(radPitch) + 1.2f
+        val camZ = world.playerPos.z + cameraDistance * cos(radYaw) * cos(radPitch)
+        if (shader.viewPosHandle != -1) {
+            GLES20.glUniform3f(shader.viewPosHandle, camX, camY, camZ)
+        }
+
+        // Pass Time for Heat Haze & Wave animations
+        if (shader.timeHandle != -1) {
+            GLES20.glUniform1f(shader.timeHandle, totalTimeSeconds)
+        }
+
+        val quality = world.graphicsQuality
+        val specularPower = when (quality) {
+            com.example.game.GraphicsQuality.ULTRA -> 64.0f
+            com.example.game.GraphicsQuality.HIGH -> 32.0f
+            com.example.game.GraphicsQuality.MEDIUM -> 16.0f
+            com.example.game.GraphicsQuality.LOW -> 8.0f
+        }
+        if (shader.specularPowerHandle != -1) {
+            GLES20.glUniform1f(shader.specularPowerHandle, specularPower)
+        }
+
+        val heatHaze = if (quality == com.example.game.GraphicsQuality.ULTRA && world.timeOfDayHours in 8.0f..17.0f) 1.0f else 0.0f
+        if (shader.heatHazeIntensityHandle != -1) {
+            GLES20.glUniform1f(shader.heatHazeIntensityHandle, heatHaze)
+        }
+
+        val fogDensity = when {
+            world.weatherState == WeatherState.SANDSTORM -> 0.045f
+            quality == com.example.game.GraphicsQuality.ULTRA -> 0.005f // Realistic atmospheric depth
+            else -> 0.008f
+        }
         GLES20.glUniform1f(shader.fogDensityHandle, fogDensity)
 
         // Render Terrain

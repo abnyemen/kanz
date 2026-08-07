@@ -614,6 +614,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setGraphicsQuality(quality: GraphicsQuality) {
+        world.graphicsQuality = quality
         _uiState.value = _uiState.value.copy(graphicsQuality = quality)
     }
 

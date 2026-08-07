@@ -5,7 +5,7 @@ enum class AppLanguage {
 }
 
 enum class GraphicsQuality {
-    LOW, MEDIUM, HIGH
+    LOW, MEDIUM, HIGH, ULTRA
 }
 
 data class Quest(

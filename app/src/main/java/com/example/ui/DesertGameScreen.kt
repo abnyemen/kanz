@@ -172,6 +172,8 @@ fun DesertGameScreen(
                     language = uiState.language,
                     graphicsQuality = uiState.graphicsQuality,
                     onSelectGraphicsQuality = { quality -> viewModel.setGraphicsQuality(quality) },
+                    fps = viewModel.world.currentFps,
+                    refreshRateHz = viewModel.world.deviceMaxHz,
                     sfxEnabled = uiState.sfxEnabled,
                     onToggleSfx = { enabled -> viewModel.setSfxEnabled(enabled) },
                     sfxVolume = uiState.sfxVolume,

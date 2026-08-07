@@ -35,6 +35,8 @@ fun SettingsDialog(
     language: AppLanguage,
     graphicsQuality: GraphicsQuality = GraphicsQuality.HIGH,
     onSelectGraphicsQuality: (GraphicsQuality) -> Unit = {},
+    fps: Int = 120,
+    refreshRateHz: Int = 120,
     sfxEnabled: Boolean = true,
     onToggleSfx: (Boolean) -> Unit = {},
     sfxVolume: Float = 0.8f,
@@ -404,10 +406,10 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // ==========================================
-                // --- SECTION 2: GRAPHICS QUALITY ---
+                // --- SECTION 2: GRAPHICS QUALITY & REFRESH RATE ---
                 // ==========================================
                 Text(
-                    text = if (isAr) "جودة الجرافيك 🎮" else "Graphics Quality 🎮",
+                    text = if (isAr) "جودة الجرافيك والرسومات 🎮" else "Graphics Quality & Rendering 🎮",
                     color = DesertGold,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -415,7 +417,7 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     GraphicsQuality.entries.forEach { quality ->
                         val isSelected = quality == graphicsQuality
@@ -429,6 +431,7 @@ fun SettingsDialog(
                                 contentColor = if (isSelected) DesertObsidian else Color.White
                             ),
                             border = BorderStroke(1.dp, if (isSelected) DesertGold else Color.Gray),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -436,9 +439,60 @@ fun SettingsDialog(
                                     GraphicsQuality.LOW -> if (isAr) "منخفضة" else "Low"
                                     GraphicsQuality.MEDIUM -> if (isAr) "متوسطة" else "Medium"
                                     GraphicsQuality.HIGH -> if (isAr) "عالية" else "High"
+                                    GraphicsQuality.ULTRA -> if (isAr) "واقعية ✨" else "Ultra ✨"
                                 },
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Display Refresh Rate & Dynamic FPS Info Badge
+                Surface(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, OasisTeal.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Speed, contentDescription = null, tint = OasisTeal, modifier = Modifier.size(20.dp))
+                            Column {
+                                Text(
+                                    text = if (isAr) "معدل تحديث الشاشة التلقائي ⚡" else "Auto Display Refresh Rate ⚡",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isAr) "دعم كامل لتردد الشاشة حتى ${refreshRateHz}Hz" else "Full support for display up to ${refreshRateHz}Hz",
+                                    color = Color.Gray,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Surface(
+                            color = OasisTeal.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, OasisTeal)
+                        ) {
+                            Text(
+                                text = "$fps FPS / ${refreshRateHz}Hz",
+                                color = OasisTeal,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
                     }

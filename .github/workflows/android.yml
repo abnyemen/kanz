@@ -23,11 +23,16 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Ensure Gradle Wrapper exists
+      run: |
+        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          echo "gradle-wrapper.jar missing, generating via installed gradle..."
+          gradle wrapper
+        fi
+        chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon -Dorg.gradle.configuration-cache=false -Pkotlin.compiler.execution.strategy=daemon
+      run: ./gradlew assembleDebug --no-daemon -Dorg.gradle.configuration-cache=false -Pkotlin.compiler.execution.strategy=daemon || gradle assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4

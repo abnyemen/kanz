@@ -11,7 +11,11 @@ class DesertShader {
         uniform vec3 uSunDir;
         uniform vec3 uSunColor;
         uniform vec3 uAmbientColor;
+        uniform vec3 uViewPos;
         uniform float uAlpha;
+        uniform float uTime;
+        uniform float uSpecularPower;
+        uniform float uHeatHazeIntensity;
         
         attribute vec3 aPosition;
         attribute vec3 aNormal;
@@ -19,20 +23,43 @@ class DesertShader {
         
         varying vec4 vColor;
         varying float vFogFactor;
+        varying vec3 vWorldNormal;
+        varying vec3 vViewDir;
         
         uniform float uFogDensity;
 
         void main() {
-            vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
-            gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
+            vec3 pos = aPosition;
+            // Desert heat haze distortion wave animation for ULTRA quality
+            if (uHeatHazeIntensity > 0.0) {
+                float wave = sin(pos.x * 2.5 + pos.z * 2.0 + uTime * 4.0) * 0.03 * uHeatHazeIntensity;
+                pos.y += wave;
+            }
+
+            vec4 worldPos = uModelMatrix * vec4(pos, 1.0);
+            gl_Position = uMVPMatrix * vec4(pos, 1.0);
             
             vec3 worldNormal = normalize(mat3(uModelMatrix) * aNormal);
-            float diff = max(dot(worldNormal, normalize(uSunDir)), 0.1);
+            vWorldNormal = worldNormal;
             
-            vec3 finalLight = uAmbientColor + (uSunColor * diff);
+            vec3 L = normalize(uSunDir);
+            float diff = max(dot(worldNormal, L), 0.12);
+            
+            // Blinn-Phong Specular & Rim Lighting for Gold / Sand Shine
+            vec3 V = normalize(uViewPos - worldPos.xyz);
+            vViewDir = V;
+            vec3 H = normalize(L + V);
+            float spec = pow(max(dot(worldNormal, H), 0.0), uSpecularPower);
+            
+            // Desert Gold Specular Color & Rim Glow
+            vec3 specColor = vec3(1.0, 0.9, 0.6) * spec * 0.4;
+            float rim = 1.0 - max(dot(V, worldNormal), 0.0);
+            vec3 rimGlow = vec3(0.9, 0.7, 0.3) * pow(rim, 3.0) * 0.2;
+            
+            vec3 finalLight = uAmbientColor + (uSunColor * diff) + specColor + rimGlow;
             vColor = vec4(aColor.rgb * finalLight, aColor.a * uAlpha);
             
-            // Distance Fog calculation for sandstorms
+            // Distance Fog calculation for sandstorms & atmospheric depth
             float dist = length(gl_Position.xyz);
             vFogFactor = exp(-dist * uFogDensity);
             vFogFactor = clamp(vFogFactor, 0.0, 1.0);
@@ -64,6 +91,10 @@ class DesertShader {
     var fogColorHandle: Int = -1
     var fogDensityHandle: Int = -1
     var alphaHandle: Int = -1
+    var viewPosHandle: Int = -1
+    var timeHandle: Int = -1
+    var specularPowerHandle: Int = -1
+    var heatHazeIntensityHandle: Int = -1
 
     fun init() {
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
@@ -86,6 +117,10 @@ class DesertShader {
         fogColorHandle = GLES20.glGetUniformLocation(program, "uFogColor")
         fogDensityHandle = GLES20.glGetUniformLocation(program, "uFogDensity")
         alphaHandle = GLES20.glGetUniformLocation(program, "uAlpha")
+        viewPosHandle = GLES20.glGetUniformLocation(program, "uViewPos")
+        timeHandle = GLES20.glGetUniformLocation(program, "uTime")
+        specularPowerHandle = GLES20.glGetUniformLocation(program, "uSpecularPower")
+        heatHazeIntensityHandle = GLES20.glGetUniformLocation(program, "uHeatHazeIntensity")
     }
 
     fun use() {

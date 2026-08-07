@@ -60,6 +60,11 @@ class Game3DWorld {
     var isTimePaused = false
     var isGamePaused = false
 
+    // Graphics & Refresh Rate Stats
+    var graphicsQuality: com.example.game.GraphicsQuality = com.example.game.GraphicsQuality.HIGH
+    var currentFps: Int = 120
+    var deviceMaxHz: Int = 120
+
     // Weather
     var weatherState = WeatherState.CLEAR
     var sandstormTimer = 0f
