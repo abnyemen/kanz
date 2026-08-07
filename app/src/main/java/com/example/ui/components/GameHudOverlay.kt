@@ -46,6 +46,8 @@ fun GameHudOverlay(
     onInteract: () -> Unit,
     onOpenDialog: (ActiveDialogType) -> Unit,
     onToggleLanguage: () -> Unit,
+    onFalconCall: () -> Unit = {},
+    onCamelBoost: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isAr = uiState.language == AppLanguage.ARABIC
@@ -280,6 +282,29 @@ fun GameHudOverlay(
                         }
                     }
                 }
+
+                // Falcon Vision Active Indicator Banner
+                AnimatedVisibility(visible = uiState.isFalconActive) {
+                    Surface(
+                        color = DesertGold.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(2.dp, Color.White),
+                        modifier = Modifier.padding(top = 6.dp).fillMaxWidth(0.85f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = if (isAr) "🦅 عين الصقر الكشاف نشطة! تم تمييز مواقع الكنوز والمفاتيح" else "🦅 Falcon Scout Active! Revealing key & treasure locations",
+                                color = DesertObsidian,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
             }
 
             // --- CENTER INTERACTION PROMPT ---
@@ -354,6 +379,47 @@ fun GameHudOverlay(
                     val attackSize = (64 * actionScale).dp
 
                     Row(horizontalArrangement = Arrangement.spacedBy((10 * actionScale).dp)) {
+                        // Falcon Call Button 🦅
+                        IconButton(
+                            onClick = onFalconCall,
+                            modifier = Modifier
+                                .size(torchSize)
+                                .clip(CircleShape)
+                                .background(if (uiState.isFalconActive) DesertGold else DesertObsidian.copy(alpha = 0.85f))
+                                .border(2.dp, DesertGold, CircleShape)
+                                .testTag("falcon_button")
+                        ) {
+                            if (uiState.falconCooldownRemaining > 0 && !uiState.isFalconActive) {
+                                Text(
+                                    text = "${uiState.falconCooldownRemaining}",
+                                    color = DesertGold,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    text = "🦅",
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+
+                        // Camel Boost Button 🐪
+                        IconButton(
+                            onClick = onCamelBoost,
+                            modifier = Modifier
+                                .size(waterSize)
+                                .clip(CircleShape)
+                                .background(if (uiState.mountSpeedBoostActive) OasisTeal else DesertObsidian.copy(alpha = 0.85f))
+                                .border(2.dp, if (uiState.currentMount != "none") OasisTeal else Color.Gray, CircleShape)
+                                .testTag("camel_boost_button")
+                        ) {
+                            Text(
+                                text = "🐪",
+                                fontSize = 18.sp
+                            )
+                        }
+
                         // Torch Toggle
                         IconButton(
                             onClick = onToggleTorch,

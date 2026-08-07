@@ -119,7 +119,9 @@ fun DesertGameScreen(
             onDrinkWater = { viewModel.drinkWater() },
             onInteract = { viewModel.interactWithNearby() },
             onOpenDialog = { dialog -> viewModel.setDialog(dialog) },
-            onToggleLanguage = { viewModel.toggleLanguage() }
+            onToggleLanguage = { viewModel.toggleLanguage() },
+            onFalconCall = { viewModel.triggerFalconCall() },
+            onCamelBoost = { viewModel.triggerCamelSprint() }
         )
 
         // --- 4. ACTIVE DIALOG OVERLAYS ---

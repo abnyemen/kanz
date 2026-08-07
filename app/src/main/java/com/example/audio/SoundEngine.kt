@@ -79,6 +79,23 @@ class SoundEngine(private val context: Context) {
         }
     }
 
+    fun playEagleScreech() {
+        if (!soundEnabled) return
+        scope.launch {
+            val sampleRate = 22050
+            val numSamples = sampleRate * 350 / 1000
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / sampleRate
+                val freq = 1200.0 + sin(t * 30.0) * 400.0
+                val env = sin(Math.PI * (i.toDouble() / numSamples))
+                val sampleVal = (sin(2.0 * Math.PI * freq * t)) * env * 0.4 * Short.MAX_VALUE
+                samples[i] = sampleVal.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            playRawPcm(samples, sampleRate)
+        }
+    }
+
     fun playDoorRumble() {
         if (!soundEnabled) return
         scope.launch {

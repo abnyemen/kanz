@@ -58,7 +58,12 @@ data class GameUiState(
     val actionButtonsScale: Float = 1.0f,
     val controlsBottomPaddingDp: Float = 12f,
     val controlsSidePaddingDp: Float = 12f,
-    val showTutorialOverlay: Boolean = true
+    val showTutorialOverlay: Boolean = true,
+    val isFalconActive: Boolean = false,
+    val falconCooldownRemaining: Int = 0,
+    val mountSpeedBoostActive: Boolean = false,
+    val activeBuffNameEn: String? = null,
+    val activeBuffNameAr: String? = null
 )
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
@@ -199,6 +204,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val moveSpeed = when {
+            _uiState.value.mountSpeedBoostActive -> 16.0f
             world.currentMount != "none" -> 9.0f
             world.playerAnimState == AnimState.SPRINT -> 6.5f
             else -> 3.8f
@@ -312,6 +318,53 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             delay(800)
             world.playerAnimState = AnimState.IDLE
+        }
+    }
+
+    fun triggerFalconCall() {
+        if (_uiState.value.falconCooldownRemaining > 0) {
+            showToast(if (_uiState.value.language == AppLanguage.ARABIC) "الصقر يرتاح حالياً 🦅 (يرجى الانتظار)" else "Falcon is resting 🦅 (Cooldown active)")
+            return
+        }
+
+        soundEngine.playEagleScreech()
+        feedbackManager.triggerCollect(symbol = "🦅")
+        _uiState.value = _uiState.value.copy(
+            isFalconActive = true,
+            falconCooldownRemaining = 25
+        )
+        showToast(if (_uiState.value.language == AppLanguage.ARABIC) "انطلق الصقر الصحراوي الكشاف! 🦅 تم كشف الكنوز القريبة" else "Falcon Scout Launched! 🦅 Highlighting nearby treasures")
+
+        viewModelScope.launch {
+            for (i in 25 downTo 0) {
+                delay(1000)
+                _uiState.value = _uiState.value.copy(
+                    isFalconActive = i > 15,
+                    falconCooldownRemaining = i
+                )
+            }
+        }
+    }
+
+    fun triggerCamelSprint() {
+        if (world.currentMount == "none") {
+            showToast(if (_uiState.value.language == AppLanguage.ARABIC) "امتطِ جملاً أولاً لتشغيل الاندفاعة! 🐪" else "Mount a camel first to sprint! 🐪")
+            return
+        }
+        if (world.stamina < 20) {
+            showToast(if (_uiState.value.language == AppLanguage.ARABIC) "التحمل غير كافٍ للاندفاعة!" else "Not enough stamina for boost!")
+            return
+        }
+
+        world.stamina = (world.stamina - 20).coerceAtLeast(0)
+        soundEngine.playCamelGrunt()
+        feedbackManager.triggerAction()
+        _uiState.value = _uiState.value.copy(mountSpeedBoostActive = true)
+        showToast(if (_uiState.value.language == AppLanguage.ARABIC) "سرعة الجمل الفائقة متقبلة! 🐪⚡" else "Camel Speed Boost active! 🐪⚡")
+
+        viewModelScope.launch {
+            delay(4500)
+            _uiState.value = _uiState.value.copy(mountSpeedBoostActive = false)
         }
     }
 
