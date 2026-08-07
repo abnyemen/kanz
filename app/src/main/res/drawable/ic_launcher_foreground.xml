@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Sun -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M54,20 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" />
+    <!-- Pyramid Left Face -->
+    <path
+        android:fillColor="#FFE082"
+        android:pathData="M54,34 L28,78 L54,82 Z" />
+    <!-- Pyramid Right Face -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M54,34 L54,82 L80,78 Z" />
+    <!-- Golden Key / Scarab Icon Overlay in Center -->
+    <path
+        android:fillColor="#FFF8E1"
+        android:pathData="M54,50 L50,58 L54,64 L58,58 Z" />
+</vector>
