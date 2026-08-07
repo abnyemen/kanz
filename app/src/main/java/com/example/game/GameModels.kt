@@ -25,6 +25,7 @@ enum class ActiveDialogType {
     INVENTORY,
     QUEST_LOG,
     TEMPLE_PUZZLE,
+    LOOT_CHEST,
     SETTINGS,
     ACHIEVEMENTS,
     STORY_INTRO,
@@ -33,6 +34,24 @@ enum class ActiveDialogType {
     PAUSE_MENU,
     LOADING_SCREEN
 }
+
+data class LootRewardItem(
+    val id: String,
+    val nameEn: String,
+    val nameAr: String,
+    val iconEmoji: String,
+    val quantity: Int,
+    val rarity: String = "Common" // "Common", "Rare", "Epic", "Legendary"
+)
+
+data class LootChestState(
+    val chestId: String,
+    val titleEn: String,
+    val titleAr: String,
+    val chestType: String, // "bronze", "silver", "gold", "legendary"
+    val rewards: List<LootRewardItem>,
+    val totalGold: Int
+)
 
 data class TemplePuzzleState(
     val templeId: String,

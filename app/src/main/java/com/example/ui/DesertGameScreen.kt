@@ -156,6 +156,17 @@ fun DesertGameScreen(
                 }
             }
 
+            ActiveDialogType.LOOT_CHEST -> {
+                uiState.currentLootChest?.let { chest ->
+                    LootChestDialog(
+                        language = uiState.language,
+                        chestState = chest,
+                        onClaimLoot = { viewModel.claimLoot() },
+                        onClose = { viewModel.setDialog(ActiveDialogType.NONE) }
+                    )
+                }
+            }
+
             ActiveDialogType.SETTINGS -> {
                 SettingsDialog(
                     language = uiState.language,

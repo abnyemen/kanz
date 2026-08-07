@@ -90,11 +90,17 @@ class Game3DWorld {
         // 2. Temples & Pyramids Interactive Altars / Doors
         // Temple of Horus (North East)
         entities.add(WorldEntity("horus_altar", "Horus Key Altar", "محراب مفتاح حورس", Vector3(80f, 1.0f, 110f), 0f, "key_altar"))
-        entities.add(WorldEntity("horus_chest", "Horus Treasure Chest", "صندوق معبد حورس", Vector3(85f, 1.0f, 115f), 180f, "chest"))
+        entities.add(WorldEntity("horus_chest", "Horus Treasure Chest", "صندوق معبد حورس الذهبي", Vector3(85f, 1.0f, 115f), 180f, "chest"))
 
         // Temple of Anubis (North West)
         entities.add(WorldEntity("anubis_altar", "Anubis Seal Altar", "محراب ختَم أنوبيس", Vector3(-90f, 1.0f, 100f), 0f, "key_altar"))
+        entities.add(WorldEntity("anubis_relic_chest", "Ancient Temple Relic Crate", "صندوق الآثار القديمة", Vector3(-85f, 1.0f, 110f), 45f, "chest"))
         entities.add(WorldEntity("boss_anubis", "Anubis Guardian", "حارس أنوبيس", Vector3(-95f, 1.2f, 105f), 0f, "boss_anubis", health = 300, maxHealth = 300))
+
+        // Oasis & Dunes Supply Loot Crates
+        entities.add(WorldEntity("oasis_crate", "Oasis Supply Crate", "صندوق إمدادات الواحة", Vector3(-35f, 0.8f, 55f), 30f, "chest"))
+        entities.add(WorldEntity("dunes_crate", "Dune Explorer Loot Crate", "صندوق مستكشف الكثبان", Vector3(45f, 0.8f, 30f), 110f, "chest"))
+        entities.add(WorldEntity("pharaoh_gold_crate", "Pharaonic Gold Crate", "صندوق ذهب الفراعنة", Vector3(10f, 0.8f, -40f), 200f, "chest"))
 
         // Bandit Stronghold (South West)
         entities.add(WorldEntity("bandit_chest", "Bandit Loot Chest", "صندوق غنائم قطاع الطرق", Vector3(-70f, 0.8f, -80f), 90f, "chest"))

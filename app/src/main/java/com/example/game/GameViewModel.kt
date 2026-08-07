@@ -9,6 +9,7 @@ import com.example.data.*
 import com.example.engine.AnimState
 import com.example.engine.Game3DWorld
 import com.example.engine.Vector3
+import com.example.engine.WorldEntity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,7 @@ data class GameUiState(
     val nearbyInteractNameEn: String? = null,
     val nearbyInteractNameAr: String? = null,
     val currentPuzzle: TemplePuzzleState? = null,
+    val currentLootChest: LootChestState? = null,
     val isGameCompleted: Boolean = false,
     val toastMessage: String? = null,
     val graphicsQuality: GraphicsQuality = GraphicsQuality.HIGH,
@@ -363,57 +365,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                     "chest" -> {
                         if (!entity.isTriggered) {
-                            entity.isTriggered = true
-                            soundEngine.playChestOpen()
-                            feedbackManager.triggerCollect(symbol = "🪙")
-                            world.goldCoins += 150
-                            
-                            // Award crafting materials
-                            viewModelScope.launch {
-                                val currentInv = inventory.value
-                                val flint = currentInv.find { it.itemId == "flint_rocks" }
-                                val plants = currentInv.find { it.itemId == "desert_plants" }
-                                val branches = currentInv.find { it.itemId == "dry_branches" }
-
-                                repository.addItem(
-                                    InventoryItem(
-                                        itemId = "flint_rocks",
-                                        nameEn = "Flint & Desert Rocks",
-                                        nameAr = "حجارة الصوان والجرانيت",
-                                        itemType = "material",
-                                        quantity = (flint?.quantity ?: 0) + 3,
-                                        descriptionEn = "Hard desert stones useful for crafting flint blades, tools, and igniting fire.",
-                                        descriptionAr = "حجارة صوان صحراوية صلبة لتصنيع الأدوات والأسلحة والشعلات.",
-                                        iconName = "material"
-                                    )
-                                )
-                                repository.addItem(
-                                    InventoryItem(
-                                        itemId = "desert_plants",
-                                        nameEn = "Desert Herbs & Fibers",
-                                        nameAr = "أعشاب وألياف الصحراء",
-                                        itemType = "material",
-                                        quantity = (plants?.quantity ?: 0) + 3,
-                                        descriptionEn = "Tough desert plant fibers and medicinal herbs gathered from oasis vegetation.",
-                                        descriptionAr = "ألياف ونباتات صحراوية وطبية تستخدم كوقود وللتضميد والتصنيع.",
-                                        iconName = "material"
-                                    )
-                                )
-                                repository.addItem(
-                                    InventoryItem(
-                                        itemId = "dry_branches",
-                                        nameEn = "Dry Palm Wood",
-                                        nameAr = "خشب وجريد النخيل",
-                                        itemType = "material",
-                                        quantity = (branches?.quantity ?: 0) + 2,
-                                        descriptionEn = "Sturdy dry palm wood used as handles for tools and torches.",
-                                        descriptionAr = "أغصان وجريد خشب صحراوي متين لمقابض الأدوات والمشاعل.",
-                                        iconName = "material"
-                                    )
-                                )
-                            }
-
-                            showToast(if (_uiState.value.language == AppLanguage.ARABIC) "فتحت الصندوق! +150 ذهب 🪙 ومواد تصنيع 🛠️" else "Opened Chest! +150 Gold 🪙 & Crafting Materials 🛠️")
+                            openLootChest(entity)
+                        } else {
+                            showToast(if (_uiState.value.language == AppLanguage.ARABIC) "هذا الصندوق مفتوح بالفعل" else "This chest is already opened")
                         }
                     }
 
@@ -450,6 +404,111 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 break
             }
         }
+    }
+
+    private fun openLootChest(entity: WorldEntity) {
+        soundEngine.playChestOpen()
+        feedbackManager.triggerCollect(symbol = "📦")
+
+        val chestType = when (entity.id) {
+            "final_chest" -> "legendary"
+            "horus_chest", "pharaoh_gold_crate" -> "gold"
+            "anubis_relic_chest", "oasis_crate" -> "silver"
+            else -> "bronze"
+        }
+
+        val totalGold = when (chestType) {
+            "legendary" -> 500
+            "gold" -> 300
+            "silver" -> 180
+            else -> 100
+        }
+
+        val rewards = mutableListOf<LootRewardItem>()
+        when (chestType) {
+            "legendary" -> {
+                rewards.add(LootRewardItem("pharaoh_scepter", "Golden Scepter of Tut", "صولجان توت عنخ آمون الذهبي", "👑", 1, "Legendary"))
+                rewards.add(LootRewardItem("ancient_elixir", "Elixir of Eternal Water", "إكسير الحياة والماء الخالد", "🧪", 2, "Epic"))
+                rewards.add(LootRewardItem("flint_rocks", "High-Grade Flint Stones", "حجارة صوان عالية الجودة", "🪨", 5, "Rare"))
+            }
+            "gold" -> {
+                rewards.add(LootRewardItem("horus_pendant", "Pendant of Horus", "قلادة حورس المقدسة", "📿", 1, "Epic"))
+                rewards.add(LootRewardItem("desert_herbs", "Healing Desert Herbs", "أعشاب شافيه وصحية", "🌿", 3, "Rare"))
+                rewards.add(LootRewardItem("dry_branches", "Hardened Palm Wood", "خشب وجريد النخيل الصلب", "🪵", 4, "Common"))
+            }
+            "silver" -> {
+                rewards.add(LootRewardItem("water_canteen", "Refilled Water Canteen", "قارورة ماء نقية مليئة", "💧", 2, "Rare"))
+                rewards.add(LootRewardItem("desert_dates", "Fresh Oasis Dates", "تمور الواحة الطازجة", "🌴", 3, "Common"))
+                rewards.add(LootRewardItem("flint_rocks", "Flint Rocks", "حجارة الصوان", "🪨", 3, "Common"))
+            }
+            else -> {
+                rewards.add(LootRewardItem("dry_branches", "Dry Palm Wood", "أغصان وجريد النخيل", "🪵", 3, "Common"))
+                rewards.add(LootRewardItem("desert_plants", "Desert Fiber", "ألياف صحراوية", "🌿", 2, "Common"))
+            }
+        }
+
+        val lootChestState = LootChestState(
+            chestId = entity.id,
+            titleEn = entity.nameEn,
+            titleAr = entity.nameAr,
+            chestType = chestType,
+            rewards = rewards,
+            totalGold = totalGold
+        )
+
+        _uiState.value = _uiState.value.copy(
+            currentLootChest = lootChestState,
+            activeDialog = ActiveDialogType.LOOT_CHEST
+        )
+    }
+
+    fun claimLoot() {
+        val chest = _uiState.value.currentLootChest ?: return
+        
+        // Mark entity as triggered in world
+        val entity = world.entities.find { it.id == chest.chestId }
+        entity?.isTriggered = true
+
+        // Award Gold
+        world.goldCoins += chest.totalGold
+
+        // Award Items into repository/inventory
+        viewModelScope.launch {
+            val currentInv = inventory.value
+            for (reward in chest.rewards) {
+                val existing = currentInv.find { it.itemId == reward.id }
+                val newQty = (existing?.quantity ?: 0) + reward.quantity
+                val itemType = when {
+                    reward.id.contains("water") || reward.id.contains("elixir") -> "water"
+                    reward.id.contains("dates") || reward.id.contains("herbs") -> "food"
+                    reward.id.contains("scepter") || reward.id.contains("pendant") -> "artifact"
+                    else -> "material"
+                }
+                repository.addItem(
+                    InventoryItem(
+                        itemId = reward.id,
+                        nameEn = reward.nameEn,
+                        nameAr = reward.nameAr,
+                        itemType = itemType,
+                        quantity = newQty,
+                        descriptionEn = "Acquired from loot chest: ${chest.titleEn}",
+                        descriptionAr = "تم الحصول عليه من صندوق اللوت: ${chest.titleAr}",
+                        iconName = if (itemType == "artifact") "artifact" else "material"
+                    )
+                )
+            }
+        }
+
+        soundEngine.playPickupChime()
+        feedbackManager.triggerCollect(symbol = "🪙")
+
+        val isAr = _uiState.value.language == AppLanguage.ARABIC
+        showToast(if (isAr) "تم إضافة ${chest.totalGold} ذهب 🪙 والغنائم إلى حقيبتك! 🎒" else "Added ${chest.totalGold} Gold 🪙 & items to backpack! 🎒")
+
+        _uiState.value = _uiState.value.copy(
+            currentLootChest = null,
+            activeDialog = ActiveDialogType.NONE
+        )
     }
 
     private fun openTemplePuzzle(altarId: String) {
